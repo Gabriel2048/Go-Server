@@ -1,12 +1,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"http-server/server"
-	"os"
-	"slices"
-	"strings"
 )
 
 func main() {
@@ -39,26 +35,6 @@ func main() {
 		return *respone
 	})
 
-	serv.MapGet("/files/{file-name}", func(request server.HttpRequest) server.HttpResponse {
-		fileName := request.RouteParameters["file-name"]
-		directory, err := getDirectory()
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-
-		filePath := directory + fileName
-		fileContent, err := os.ReadFile(filePath)
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-		respone := server.NewHttpResponse(200)
-		respone.SetOctetStreamBody(fileContent)
-
-		return *respone
-	})
-
 	serv.MapGet("/user-agent", func(request server.HttpRequest) server.HttpResponse {
 		userAgent, hasUserAgent := request.Headers.GetHeaderValue("User-Agent")
 
@@ -83,51 +59,7 @@ func main() {
 		return *response
 	})
 
-	serv.MapPost("/files/{file-name}", func(request server.HttpRequest) server.HttpResponse {
-		fileName := request.RouteParameters["file-name"]
-		directory, err := getDirectory()
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-
-		file, err := os.Create(directory + fileName)
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-
-		body, err := request.ReadBody()
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-
-		_, err = file.Write(body)
-
-		if err != nil {
-			return *server.NewNotFound()
-		}
-
-		respone := server.NewHttpResponse(201)
-
-		return *respone
-	})
-
 	serv.RunOnPort("4221")
-}
-
-func getDirectory() (string, error) {
-	args := os.Args
-	if len(args) > 0 {
-		directoryIndex := slices.IndexFunc(args, func(arg string) bool {
-			return strings.HasPrefix(arg, "--directory")
-		})
-		if directoryIndex >= 0 {
-			return args[directoryIndex+1], nil
-		}
-	}
-	return "", errors.New("directory parameter not found")
 }
 
 type User struct {
