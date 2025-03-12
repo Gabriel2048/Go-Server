@@ -3,11 +3,15 @@ package main
 import (
 	"fmt"
 	"http-server/server"
+	"http-server/server/builder"
 )
 
 func main() {
 
-	serv := server.NewServer()
+	serv, _ := server.NewServer(
+		builder.WithPort(4221),
+		builder.WithHost("0.0.0.0"),
+	)
 
 	serv.MapGet("/", func(request server.HttpRequest) server.HttpResponse {
 		response := server.NewHttpResponse(200)
@@ -59,7 +63,7 @@ func main() {
 		return *response
 	})
 
-	serv.RunOnPort("4221")
+	serv.Run()
 }
 
 type User struct {

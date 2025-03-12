@@ -38,7 +38,12 @@ type httpStatusLine struct {
 func NewFromTCPConnection(conn net.Conn) (*HttpRequest, error) {
 	reader := bufio.NewReader(conn)
 
-	statusLine, _ := readStatusLine(reader)
+	statusLine, err := readStatusLine(reader)
+
+	if err != nil {
+		return nil, err
+	}
+
 	headers, err := readHeaders(reader)
 	if err != nil {
 		return nil, err
