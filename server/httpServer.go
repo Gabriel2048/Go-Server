@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"http-server/server/builder"
 	"http-server/server/routing"
 	"net"
 	"strings"
@@ -15,15 +16,26 @@ type routeWithHandler struct {
 }
 
 type Server struct {
-	routes []routeWithHandler
+	routes  []routeWithHandler
+	options builder.Options
 }
 
 type HttpHandler func(request HttpRequest) HttpResponse
 
-func NewServer() *Server {
-	return &Server{
-		routes: make([]routeWithHandler, 0),
+func NewServer(options ...builder.Option) (*Server, error) {
+	var serverOptions builder.Options
+
+	for _, option := range options {
+		err := option(&serverOptions)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	return &Server{
+		routes:  make([]routeWithHandler, 0),
+		options: serverOptions,
+	}, nil
 }
 
 func (s *Server) MapGet(path string, handler HttpHandler) error {
@@ -59,13 +71,14 @@ func (s *Server) MapPost(path string, handler HttpHandler) error {
 	return nil
 }
 
-func (s *Server) RunOnPort(port string) error {
-	const addressFormat string = "0.0.0.0:%s"
-	listener, err := net.Listen("tcp", fmt.Sprintf(addressFormat, port))
+func (s *Server) Run() error {
+	const addressFormat string = "%s:%d"
+	serverAddress := fmt.Sprintf(addressFormat, s.options.Host, s.options.Port)
+	listener, err := net.Listen("tcp", serverAddress)
 	if err != nil {
-		return fmt.Errorf("failed to bind to port %s", port)
+		return fmt.Errorf("failed to bind to port %s", serverAddress)
 	}
-	fmt.Printf("Listening on port %s\n", port)
+	fmt.Printf("Listening on port %s\n", serverAddress)
 
 	for {
 
@@ -75,6 +88,7 @@ func (s *Server) RunOnPort(port string) error {
 		}
 
 		go func() {
+			defer writeInternalServerErrorOnPanic(conn)
 
 			request, err := NewFromTCPConnection(conn)
 			if err != nil {
@@ -94,7 +108,6 @@ func writeInternalServerErrorOnPanic(c net.Conn) {
 }
 
 func (s *Server) executeRequest(verb Verb, conn net.Conn, request *HttpRequest) {
-	defer writeInternalServerErrorOnPanic(conn)
 	defer conn.Close()
 
 	handler := s.findHandler(verb, request)
