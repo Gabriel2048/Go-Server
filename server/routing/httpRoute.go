@@ -64,12 +64,12 @@ func (h HttpRouteTemplate) CanHandlerPath(path string) (RouteParameters, bool) {
 	routeParams := RouteParameters{}
 
 	for index, nodeTemplate := range h.nodes {
-		if !nodeTemplate.isParameter {
+		if nodeTemplate.isParameter {
+			routeParams[nodeTemplate.value] = parts[index]
+		} else {
 			if nodeTemplate.value != parts[index] {
 				return nil, false
 			}
-		} else {
-			routeParams[nodeTemplate.value] = parts[index]
 		}
 	}
 

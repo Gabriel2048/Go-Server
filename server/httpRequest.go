@@ -27,6 +27,7 @@ type HttpRequest struct {
 	RouteParameters r.RouteParameters
 	Headers         c.HttpRequestHeaders
 	Body            io.Reader
+	handler         HttpHandler
 }
 
 type httpStatusLine struct {
@@ -35,7 +36,7 @@ type httpStatusLine struct {
 	httpVersion string
 }
 
-func NewFromTCPConnection(conn net.Conn) (*HttpRequest, error) {
+func NewFromTCPConnection(conn net.Conn, routes []routeWithHandler) (*HttpRequest, error) {
 	reader := bufio.NewReader(conn)
 
 	statusLine, err := readStatusLine(reader)
@@ -51,11 +52,15 @@ func NewFromTCPConnection(conn net.Conn) (*HttpRequest, error) {
 
 	body := bufio.NewReader(reader)
 
+	handler, routeParameters := matchHandlerAndRouteParams(*statusLine.target, statusLine.verb, routes)
+
 	return &HttpRequest{
-		Verb:    statusLine.verb,
-		Url:     statusLine.target,
-		Headers: *headers,
-		Body:    body,
+		Verb:            statusLine.verb,
+		Url:             statusLine.target,
+		Headers:         *headers,
+		Body:            body,
+		RouteParameters: routeParameters,
+		handler:         handler,
 	}, nil
 }
 
@@ -145,6 +150,22 @@ func readHeaders(reader *bufio.Reader) (*c.HttpRequestHeaders, error) {
 	return &result, nil
 }
 
+func matchHandlerAndRouteParams(url url.URL, verb Verb, routes []routeWithHandler) (HttpHandler, r.RouteParameters) {
+	for _, routeWithHandler := range routes {
+
+		if routeWithHandler.verb != verb {
+			continue
+		}
+
+		routeParameters, canHandle := routeWithHandler.route.CanHandlerPath(url.Path)
+		if canHandle {
+			return routeWithHandler.handler, routeParameters
+		}
+	}
+
+	return notFound, r.RouteParameters{}
+}
+
 func castToVerb(s string) (Verb, error) {
 	switch Verb(s) {
 	case GET, POST, PATCH, DELETE:
@@ -152,4 +173,8 @@ func castToVerb(s string) (Verb, error) {
 	default:
 		return "", fmt.Errorf("invalid Verb: %s", s)
 	}
+}
+
+func notFound(request HttpRequest) HttpResponse {
+	return *NewNotFound()
 }
