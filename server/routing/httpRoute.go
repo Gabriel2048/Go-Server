@@ -10,6 +10,8 @@ type HttpRouteTemplate struct {
 	nodes []routeNodeTemplate
 }
 
+type RouteParameters map[string]string
+
 type routeNodeTemplate struct {
 	value       string
 	isParameter bool
@@ -29,26 +31,17 @@ func NewRouteFromString(rawRoute string) (HttpRouteTemplate, error) {
 		if part == "/" && parts[index+1] == "/" && index < len(parts)-1 { // two '/' next to each other make for an invalid url
 			return HttpRouteTemplate{}, errors.New("invalid route due to 2 '/'")
 		}
-		value := part
 
-		isParameter := len(part) > 2 && strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}")
-		if isParameter {
-			value = part[1 : len(part)-1] //trims the {} surrounding the value
-			if strings.Contains(value, "}") || strings.Contains(value, "{") {
-				return HttpRouteTemplate{}, errors.New("malformed parameter")
-			}
+		node, err := extractNode(part)
+		if err != nil {
+			return HttpRouteTemplate{}, err
 		}
 
-		node := routeNodeTemplate{
-			value:       value,
-			isParameter: isParameter,
-		}
-
-		if isParameter && slices.Contains(nodes, node) {
+		if node.isParameter && slices.Contains(nodes, *node) {
 			return HttpRouteTemplate{}, errors.New("duplicated path parameter")
 		}
 
-		nodes = append(nodes, node)
+		nodes = append(nodes, *node)
 	}
 
 	return HttpRouteTemplate{
@@ -83,4 +76,23 @@ func (h HttpRouteTemplate) CanHandlerPath(path string) (RouteParameters, bool) {
 	return routeParams, true
 }
 
-type RouteParameters map[string]string
+func extractNode(part string) (*routeNodeTemplate, error) {
+	isParameter := len(part) > 2 && strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}")
+
+	if isParameter {
+		rawParameter := part[1 : len(part)-1]
+		if strings.Contains(rawParameter, "{") || strings.Contains(rawParameter, "}") {
+			return nil, errors.New("malformed paramter")
+		}
+
+		return &routeNodeTemplate{
+			value:       rawParameter,
+			isParameter: true,
+		}, nil
+	}
+
+	return &routeNodeTemplate{
+		value:       part,
+		isParameter: false,
+	}, nil
+}
