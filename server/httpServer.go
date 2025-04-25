@@ -1,8 +1,10 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"http-server/server/builder"
+	c "http-server/server/certificate"
 	"http-server/server/routing"
 	"net"
 )
@@ -39,7 +41,7 @@ func NewServer(options ...builder.Option) (*Server, error) {
 func (s *Server) Run() error {
 	const addressFormat string = "%s:%d"
 	serverAddress := fmt.Sprintf(addressFormat, s.options.Host, s.options.Port)
-	listener, err := net.Listen("tcp", serverAddress)
+	listener, err := createListener(serverAddress, s.options.TlsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to bind to port %s", serverAddress)
 	}
@@ -53,4 +55,18 @@ func (s *Server) Run() error {
 
 		go s.processTcpRequest(conn)
 	}
+}
+
+func createListener(serverAddress string, tlsconfig *tls.Config) (net.Listener, error) {
+	if tlsconfig == nil {
+		config := &tls.Config{
+			GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				return c.CreateSelfSignedCertificate(chi)
+			},
+		}
+
+		return tls.Listen("tcp", serverAddress, config)
+	}
+
+	return tls.Listen("tcp", serverAddress, tlsconfig)
 }
