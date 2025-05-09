@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	c "http-server/server/core"
@@ -91,8 +92,23 @@ var ErrMalformedStatusLine = errors.New("malformed status line")
 
 func readStatusLine(reader *bufio.Reader) (*httpStatusLine, error) {
 	rawRequestLine, err := reader.ReadString('\n')
+
 	if err != nil {
-		return nil, ErrMalformedStatusLine
+		if r, isRecordHeaderError := err.(tls.RecordHeaderError); isRecordHeaderError {
+			// t := r.Conn.(*net.TCPConn)
+
+			reader := bufio.NewReader(r.Conn)
+			println(reader.Size())
+			// qq := make([]byte, reader.Size())
+			// a, err := reader.Read(qq)
+
+			return nil, nonHttpsRequestError{
+				conn: r.Conn,
+				path: r.Conn.RemoteAddr().String(),
+			}
+		} else {
+			return nil, ErrMalformedStatusLine
+		}
 	}
 
 	requestLine := rawRequestLine[0 : len(rawRequestLine)-2]

@@ -3,9 +3,10 @@ package builder
 import "crypto/tls"
 
 type Options struct {
-	Port      int
-	Host      string
-	TlsConfig *tls.Config
+	Port          int
+	Host          string
+	TlsConfig     *tls.Config
+	HttpsRedirect bool
 }
 
 type Option func(options *Options) error
@@ -27,6 +28,13 @@ func WithHost(host string) Option {
 func WithTLSConfig(tlsOptions *tls.Config) Option {
 	return func(options *Options) error {
 		options.TlsConfig = tlsOptions
+		return nil
+	}
+}
+
+func WithHttpsRedirect() Option {
+	return func(options *Options) error {
+		options.HttpsRedirect = true
 		return nil
 	}
 }

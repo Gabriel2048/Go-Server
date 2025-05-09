@@ -13,6 +13,10 @@ func (s StatusCode) GetReason() string {
 		return "OK"
 	case 201:
 		return "Created"
+	case 301:
+		return "Moved Permanently"
+	case 308:
+		return "Permanent Redirect"
 	case 404:
 		return "Not Found"
 	case 500:

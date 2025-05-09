@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"http-server/server/core"
 	c "http-server/server/core"
 	"strconv"
 )
@@ -39,6 +40,16 @@ func NewNotFound() *HttpResponse {
 	return &HttpResponse{
 		statusCode: c.NotFound,
 		headers:    c.NewEmpty(),
+	}
+}
+
+func NewPermanentRedirect(location string) *HttpResponse {
+	return &HttpResponse{
+		statusCode: 308,
+		headers: core.HttpRequestHeaders{
+			"Content-Length": "0",
+			"Location":       location,
+		},
 	}
 }
 

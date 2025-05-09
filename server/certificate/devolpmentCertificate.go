@@ -10,7 +10,7 @@ import (
 	"math/big"
 )
 
-var ErrUnableToGenerateSelfSignedCertiticate = errors.New("error sample")
+var ErrUnableToGenerateSelfSignedCertiticate = errors.New("unable to generate self sign certificate")
 
 func CreateSelfSignedCertificate(a *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)

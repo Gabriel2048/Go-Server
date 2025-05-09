@@ -39,8 +39,7 @@ func NewServer(options ...builder.Option) (*Server, error) {
 }
 
 func (s *Server) Run() error {
-	const addressFormat string = "%s:%d"
-	serverAddress := fmt.Sprintf(addressFormat, s.options.Host, s.options.Port)
+	serverAddress := s.Addr()
 	listener, err := createListener(serverAddress, s.options.TlsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to bind to port %s", serverAddress)
@@ -57,6 +56,12 @@ func (s *Server) Run() error {
 	}
 }
 
+func (s *Server) Addr() string {
+	const addressFormat string = "%s:%d"
+	serverAddress := fmt.Sprintf(addressFormat, s.options.Host, s.options.Port)
+	return serverAddress
+}
+
 func createListener(serverAddress string, tlsconfig *tls.Config) (net.Listener, error) {
 	if tlsconfig == nil {
 		config := &tls.Config{
@@ -64,7 +69,6 @@ func createListener(serverAddress string, tlsconfig *tls.Config) (net.Listener, 
 				return c.CreateSelfSignedCertificate(chi)
 			},
 		}
-
 		return tls.Listen("tcp", serverAddress, config)
 	}
 

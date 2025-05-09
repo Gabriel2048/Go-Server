@@ -11,6 +11,7 @@ func main() {
 	serv, _ := server.NewServer(
 		builder.WithPort(4221),
 		builder.WithHost("0.0.0.0"),
+		builder.WithHttpsRedirect(),
 	)
 
 	serv.MapGet("/", func(request server.HttpRequest) server.HttpResponse {

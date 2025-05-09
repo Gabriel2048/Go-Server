@@ -12,11 +12,29 @@ func (s *Server) processTcpRequest(conn net.Conn) {
 
 	request, err := NewFromTCPConnection(conn, s.routes)
 	if err != nil {
-		fmt.Println(err)
+
+		if c, ok := err.(nonHttpsRequestError); ok {
+			s.executeNonHttpsRequest(c.conn)
+			return
+		}
+
 		return
 	}
 
 	s.executeRequest(conn, request)
+}
+
+func (s *Server) executeNonHttpsRequest(conn net.Conn) {
+	if s.options.HttpsRedirect {
+		const httpsRedirectUrlFormat = "https://%s/%s"
+		redirectUrl := fmt.Sprintf(httpsRedirectUrlFormat, s.Addr(), "echo/cvcx")
+		r := NewPermanentRedirect(redirectUrl)
+		println(r.ToHttpString())
+		conn.Write([]byte(r.ToHttpString()))
+		conn.Close()
+	} else {
+
+	}
 }
 
 func (s *Server) executeRequest(conn net.Conn, request *HttpRequest) {
